@@ -2,7 +2,7 @@
 import json
 import requests
 from datetime import datetime
-from src.config import NOTION_API_KEY, NOTION_DATABASE_ID, SLACK_WEBHOOK_URL
+from src.config import NOTION_API_KEY, NOTION_DATABASE_ID, SLACK_WEBHOOK_URL, SLACK_BOT_TOKEN, SLACK_CHANNEL_ID
 
 
 def create_notion_page(title: str, markdown_content: str, audio_url: str = None) -> str:
@@ -79,11 +79,25 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
             },
         })
 
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Count articles from markdown content
+    article_count = markdown_content.count("###") if markdown_content else 0
+
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
         "properties": {
-            "title": {
+            "Title": {
                 "title": [{"text": {"content": title}}]
+            },
+            "Date": {
+                "date": {"start": today}
+            },
+            "Status": {
+                "status": {"name": "완료"}
+            },
+            "ArticleCount": {
+                "number": article_count
             },
         },
         "children": blocks[:100],  # Notion limit
@@ -102,6 +116,60 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
     page_url = resp.json().get("url", "")
     print(f"  Notion page created: {page_url}")
     return page_url
+
+
+def upload_slack_audio(audio_path: str, title: str) -> bool:
+    """Upload audio file to Slack channel via Bot Token."""
+    if not SLACK_BOT_TOKEN or not SLACK_CHANNEL_ID:
+        print("  Slack bot token or channel ID not configured, skipping audio upload")
+        return False
+
+    headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
+
+    # Step 1: Get upload URL
+    import os
+    file_size = os.path.getsize(audio_path)
+    filename = os.path.basename(audio_path)
+
+    resp = requests.get(
+        "https://slack.com/api/files.getUploadURLExternal",
+        headers=headers,
+        params={"filename": filename, "length": file_size},
+        timeout=10,
+    )
+    data = resp.json()
+    if not data.get("ok"):
+        print(f"  Slack upload URL error: {data.get('error', 'unknown')}")
+        return False
+
+    upload_url = data["upload_url"]
+    file_id = data["file_id"]
+
+    # Step 2: Upload file
+    with open(audio_path, "rb") as f:
+        resp = requests.post(upload_url, files={"file": f}, timeout=60)
+    if resp.status_code != 200:
+        print(f"  Slack file upload error: {resp.status_code}")
+        return False
+
+    # Step 3: Complete upload
+    resp = requests.post(
+        "https://slack.com/api/files.completeUploadExternal",
+        headers={**headers, "Content-Type": "application/json"},
+        json={
+            "files": [{"id": file_id, "title": title}],
+            "channel_id": SLACK_CHANNEL_ID,
+            "initial_comment": f"🎧 *{title}* - 오디오 브리핑",
+        },
+        timeout=10,
+    )
+    data = resp.json()
+    if data.get("ok"):
+        print("  Slack audio uploaded")
+        return True
+    else:
+        print(f"  Slack complete upload error: {data.get('error', 'unknown')}")
+        return False
 
 
 def send_slack_notification(briefing_title: str, notion_url: str, audio_url: str = None):

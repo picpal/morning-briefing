@@ -8,11 +8,15 @@ import os
 import sys
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+# .env 파일이 있으면 로드 (로컬 테스트용)
+load_dotenv()
 
 from src.modules.news_collector import collect_all_news
 from src.modules.script_generator import generate_briefing_markdown, generate_podcast_script
 from src.modules.tts_generator import generate_audio
-from src.modules.notifier import create_notion_page, send_slack_notification
+from src.modules.notifier import create_notion_page, send_slack_notification, upload_slack_audio
 
 
 def run_pipeline():
@@ -70,6 +74,7 @@ def run_pipeline():
 
     if notion_url:
         send_slack_notification(title, notion_url, audio_url)
+        upload_slack_audio(audio_path, title)
 
     print(f"\n{'='*50}")
     print(f"  Pipeline completed successfully!")

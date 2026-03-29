@@ -6,9 +6,10 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GOOGLE_TTS_KEY_JSON = os.environ.get("GOOGLE_TTS_KEY_JSON", "")
 NOTION_API_KEY = os.environ.get("NOTION_API_KEY", "")
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
 
 # Notion
-NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID", "32e9789c-7eb1-8015-ac54-000bb7954c05")
+NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID", "32e9789c-7eb1-809b-8adc-e0ec48f5e0c9")
 
 # Slack
 SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "C0APAH1HJ2W")
