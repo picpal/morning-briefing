@@ -1,8 +1,37 @@
 """Send briefing to Notion and Slack."""
 import json
+import re
 import requests
 from datetime import datetime
 from src.config import NOTION_API_KEY, NOTION_DATABASE_ID, SLACK_WEBHOOK_URL, SLACK_BOT_TOKEN, SLACK_CHANNEL_ID
+
+
+def _parse_markdown_links(text: str) -> list:
+    """Parse markdown links [title](url) into Notion rich_text segments."""
+    segments = []
+    pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+    last_end = 0
+    for match in re.finditer(pattern, text):
+        # Text before the link
+        before = text[last_end:match.start()]
+        if before:
+            segments.append({"type": "text", "text": {"content": before}})
+        # The link itself
+        link_title = match.group(1)
+        link_url = match.group(2)
+        segments.append({
+            "type": "text",
+            "text": {"content": link_title, "link": {"url": link_url}},
+        })
+        last_end = match.end()
+    # Remaining text after last link
+    remaining = text[last_end:]
+    if remaining:
+        segments.append({"type": "text", "text": {"content": remaining}})
+    # If no links found, return simple text
+    if not segments:
+        segments.append({"type": "text", "text": {"content": text}})
+    return segments
 
 
 def create_notion_page(title: str, markdown_content: str, audio_url: str = None) -> str:
@@ -27,7 +56,7 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
                 "object": "block",
                 "type": "heading_2",
                 "heading_2": {
-                    "rich_text": [{"type": "text", "text": {"content": line[3:]}}]
+                    "rich_text": _parse_markdown_links(line[3:])
                 },
             })
         elif line.startswith("### "):
@@ -35,7 +64,7 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
                 "object": "block",
                 "type": "heading_3",
                 "heading_3": {
-                    "rich_text": [{"type": "text", "text": {"content": line[4:]}}]
+                    "rich_text": _parse_markdown_links(line[4:])
                 },
             })
         elif line.startswith("- "):
@@ -43,7 +72,7 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
                 "object": "block",
                 "type": "bulleted_list_item",
                 "bulleted_list_item": {
-                    "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
+                    "rich_text": _parse_markdown_links(line[2:])
                 },
             })
         elif line.startswith("> "):
@@ -51,7 +80,7 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
                 "object": "block",
                 "type": "quote",
                 "quote": {
-                    "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
+                    "rich_text": _parse_markdown_links(line[2:])
                 },
             })
         elif line.startswith("---"):
@@ -61,7 +90,7 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
                 "object": "block",
                 "type": "paragraph",
                 "paragraph": {
-                    "rich_text": [{"type": "text", "text": {"content": line}}]
+                    "rich_text": _parse_markdown_links(line)
                 },
             })
 
