@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+*.key.json
+.venv/
+venv/
+.baton/logs/
+.baton/reports/

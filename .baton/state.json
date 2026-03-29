@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "currentTier": null,
+  "currentPhase": "idle",
+  "phaseFlags": {
+    "analysisCompleted": false,
+    "interviewCompleted": false,
+    "planningCompleted": false,
+    "taskMgrCompleted": false,
+    "workerCompleted": false,
+    "qaUnitPassed": false,
+    "qaIntegrationPassed": false,
+    "reviewCompleted": false
+  },
+  "planningTracker": { "expected": 0, "completed": [] },
+  "reviewTracker": { "expected": 0, "completed": [] },
+  "workerTracker": { "expected": 0, "doneCount": 0 },
+  "qaRetryCount": {},
+  "reworkStatus": { "active": false, "attemptCount": 0 },
+  "securityHalt": false,
+  "lastSafeTag": null,
+  "timestamp": ""
+}
