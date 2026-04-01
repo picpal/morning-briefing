@@ -1,10 +1,37 @@
 """Generate audio from podcast script using Google Cloud TTS."""
 import json
+import re
 import base64
 import time
 import requests
 import jwt
 from src.config import GOOGLE_TTS_KEY_JSON, TTS_VOICE, TTS_API_URL
+
+
+def _text_to_ssml(text: str) -> str:
+    """Convert plain text to SSML with natural pauses at commas and sentences."""
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;")
+    text = text.replace(">", "&gt;")
+
+    paragraphs = text.split("\n\n")
+    ssml_parts = []
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+        sentences = re.split(r'(?<=[.!?])\s+', para)
+        s_tags = []
+        for s in sentences:
+            s = s.strip()
+            if not s:
+                continue
+            s = re.sub(r',\s*', ', <break time="200ms"/>', s)
+            s_tags.append('<s>' + s + '</s><break time="300ms"/>')
+        ssml_parts.append('<p>' + ''.join(s_tags) + '</p>')
+
+    body = '<break time="600ms"/>'.join(ssml_parts)
+    return '<speak>' + body + '</speak>'
 
 
 def _get_access_token() -> str:
@@ -28,14 +55,16 @@ def _synthesize_chunk(text: str, token: str) -> bytes:
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
+    ssml_text = _text_to_ssml(text)
     payload = {
-        "input": {"text": text},
+        "input": {"ssml": ssml_text},
         "voice": {
             "languageCode": "ko-KR",
             "name": TTS_VOICE,
         },
         "audioConfig": {
             "audioEncoding": "MP3",
+            "speakingRate": 0.95,
         },
     }
     resp = requests.post(TTS_API_URL, headers=headers, json=payload, timeout=120)

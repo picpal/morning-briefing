@@ -13,14 +13,30 @@ from dotenv import load_dotenv
 # .env 파일이 있으면 로드 (로컬 테스트용)
 load_dotenv()
 
+from src.config import ANTHROPIC_API_KEY, GOOGLE_TTS_KEY_JSON, NOTION_API_KEY
 from src.modules.news_collector import collect_all_news
 from src.modules.script_generator import generate_briefing_markdown, generate_podcast_script
 from src.modules.tts_generator import generate_audio
 from src.modules.notifier import create_notion_page, send_slack_notification, upload_slack_audio
 
+REQUIRED_ENVS = {
+    "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
+    "GOOGLE_TTS_KEY_JSON": GOOGLE_TTS_KEY_JSON,
+    "NOTION_API_KEY": NOTION_API_KEY,
+}
+
+
+def validate_env():
+    """필수 환경변수가 설정되어 있는지 검증."""
+    missing = [name for name, value in REQUIRED_ENVS.items() if not value]
+    if missing:
+        print(f"[ERROR] 필수 환경변수가 설정되지 않았습니다: {', '.join(missing)}")
+        sys.exit(1)
+
 
 def run_pipeline():
     """Execute the full morning briefing pipeline."""
+    validate_env()
     today = datetime.now().strftime("%Y-%m-%d")
     weekday = ["월", "화", "수", "목", "금", "토", "일"][datetime.now().weekday()]
     title = f"IT/LLM 데일리 브리핑 - {today} ({weekday})"

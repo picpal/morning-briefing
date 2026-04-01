@@ -15,7 +15,7 @@ NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID", "32e9789c-7eb1-809b-8a
 SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "C0APAH1HJ2W")
 
 # TTS
-TTS_VOICE = os.environ.get("TTS_VOICE", "ko-KR-Chirp3-HD-Achernar")
+TTS_VOICE = os.environ.get("TTS_VOICE", "ko-KR-Chirp3-HD-Sulafat")
 TTS_API_URL = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
 
 # Claude
