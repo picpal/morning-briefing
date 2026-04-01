@@ -49,8 +49,8 @@ def _get_access_token() -> str:
     return token
 
 
-def _synthesize_chunk(text: str, token: str) -> bytes:
-    """Synthesize a single text chunk to audio bytes."""
+def _synthesize_chunk(text: str, token: str, max_retries: int = 3) -> bytes:
+    """Synthesize a single text chunk to audio bytes with retry on transient errors."""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -67,11 +67,18 @@ def _synthesize_chunk(text: str, token: str) -> bytes:
             "speakingRate": 0.95,
         },
     }
-    resp = requests.post(TTS_API_URL, headers=headers, json=payload, timeout=120)
-    if resp.status_code != 200:
+    for attempt in range(1, max_retries + 1):
+        resp = requests.post(TTS_API_URL, headers=headers, json=payload, timeout=120)
+        if resp.status_code == 200:
+            audio_b64 = resp.json()["audioContent"]
+            return base64.b64decode(audio_b64)
+        if resp.status_code in (429, 500, 502, 503) and attempt < max_retries:
+            wait = 2 ** attempt
+            print(f"    TTS API error {resp.status_code}, retrying in {wait}s (attempt {attempt}/{max_retries})...")
+            time.sleep(wait)
+            continue
         raise RuntimeError(f"TTS API error {resp.status_code}: {resp.text[:200]}")
-    audio_b64 = resp.json()["audioContent"]
-    return base64.b64decode(audio_b64)
+    raise RuntimeError("TTS API failed after all retries")
 
 
 def generate_audio(script_text: str, output_path: str) -> str:
