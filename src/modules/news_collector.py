@@ -2,7 +2,7 @@
 import feedparser
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 
 
@@ -38,7 +38,8 @@ def fetch_rss_entries(feed_url: str, hours: int = 48) -> list[dict]:
     """Fetch RSS entries from the last N hours."""
     try:
         feed = feedparser.parse(feed_url)
-        cutoff = datetime.now() - timedelta(hours=hours)
+        KST = timezone(timedelta(hours=9))
+        cutoff = datetime.now(KST).replace(tzinfo=None) - timedelta(hours=hours)
         entries = []
         for entry in feed.entries[:15]:
             published = None

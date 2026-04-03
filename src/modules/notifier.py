@@ -2,7 +2,7 @@
 import json
 import re
 import requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from src.config import NOTION_API_KEY, NOTION_DATABASE_ID, SLACK_WEBHOOK_URL, SLACK_BOT_TOKEN, SLACK_CHANNEL_ID
 
 
@@ -108,7 +108,8 @@ def create_notion_page(title: str, markdown_content: str, audio_url: str = None)
             },
         })
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST).strftime("%Y-%m-%d")
 
     # Count articles from markdown content
     article_count = markdown_content.count("###") if markdown_content else 0

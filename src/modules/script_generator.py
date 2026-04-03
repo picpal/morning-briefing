@@ -1,6 +1,6 @@
 """Generate briefing markdown and podcast script using Claude API."""
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from anthropic import Anthropic
 from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from src.prompts.briefing_prompt import (
@@ -25,7 +25,8 @@ def _call_claude(system: str, user: str, max_tokens: int = 4096) -> str:
 
 def generate_briefing_markdown(news_data: dict[str, list[dict]]) -> str:
     """Generate markdown briefing from collected news data."""
-    today = datetime.now().strftime("%Y-%m-%d")
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST).strftime("%Y-%m-%d")
 
     # Format news data for the prompt
     formatted = ""
