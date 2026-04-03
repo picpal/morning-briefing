@@ -7,7 +7,7 @@ converts to audio, and delivers via Notion + Slack.
 import os
 import sys
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 # .env 파일이 있으면 로드 (로컬 테스트용)
@@ -37,8 +37,10 @@ def validate_env():
 def run_pipeline():
     """Execute the full morning briefing pipeline."""
     validate_env()
-    today = datetime.now().strftime("%Y-%m-%d")
-    weekday = ["월", "화", "수", "목", "금", "토", "일"][datetime.now().weekday()]
+    KST = timezone(timedelta(hours=9))
+    now_kst = datetime.now(KST)
+    today = now_kst.strftime("%Y-%m-%d")
+    weekday = ["월", "화", "수", "목", "금", "토", "일"][now_kst.weekday()]
     title = f"IT/LLM 데일리 브리핑 - {today} ({weekday})"
     
     print(f"{'='*50}")
