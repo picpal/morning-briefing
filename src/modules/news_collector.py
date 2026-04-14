@@ -62,6 +62,23 @@ _BLOG_PATTERN = re.compile(
 )
 
 
+def _unescape(s: str) -> str:
+    """Unescape simple backslash sequences extracted from Next.js SSR JSON."""
+    return s.replace('\\"', '"').replace("\\\\", "\\").replace("\\n", " ")
+
+
+def _dedup_by_title(entries: list[dict]) -> list[dict]:
+    """Deduplicate entries by normalised title (alphanumeric chars, first 40)."""
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for e in entries:
+        short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
+        if short_title not in seen:
+            seen.add(short_title)
+            unique.append(e)
+    return unique
+
+
 def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
     """Fetch Anthropic blog posts mentioning Claude Code published within *days* days.
 
@@ -113,10 +130,6 @@ def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
                 if parsed_date < cutoff:
                     continue
 
-                # Unescape simple backslash sequences in extracted strings
-                def _unescape(s: str) -> str:
-                    return s.replace('\\"', '"').replace("\\\\", "\\").replace("\\n", " ")
-
                 title_clean = _unescape(title)
                 summary_clean = _unescape(summary)
 
@@ -141,13 +154,7 @@ def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
             print(f"  Anthropic blog error ({url}): {e}")
 
     # T7: dedup by title similarity (same algo as collect_all_news)
-    seen_titles: set[str] = set()
-    unique: list[dict] = []
-    for e in entries:
-        short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
-        if short_title not in seen_titles:
-            seen_titles.add(short_title)
-            unique.append(e)
+    unique = _dedup_by_title(entries)
 
     # T8: cap at 10
     return unique[:10]
@@ -187,25 +194,13 @@ def collect_all_news() -> dict[str, list[dict]]:
         for feed_url in feeds:
             entries.extend(fetch_rss_entries(feed_url))
         # Deduplicate by title similarity
-        seen_titles = set()
-        unique = []
-        for e in entries:
-            short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
-            if short_title not in seen_titles:
-                seen_titles.add(short_title)
-                unique.append(e)
+        unique = _dedup_by_title(entries)
         all_news[category] = unique[:10]  # Max 10 per category
         print(f"  [{category}] {len(unique)} articles collected")
 
     # T6: Integrate Anthropic blog posts under "claude_code_blog" key
     blog_entries = fetch_anthropic_blog_posts()
-    seen_blog_titles: set[str] = set()
-    unique_blog: list[dict] = []
-    for e in blog_entries:
-        short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
-        if short_title not in seen_blog_titles:
-            seen_blog_titles.add(short_title)
-            unique_blog.append(e)
+    unique_blog = _dedup_by_title(blog_entries)
     all_news["claude_code_blog"] = unique_blog[:10]
     print(f"  [claude_code_blog] {len(unique_blog)} articles collected")
 
