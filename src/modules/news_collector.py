@@ -39,14 +39,19 @@ ANTHROPIC_BLOG_SOURCES = [
     "https://www.anthropic.com/news",
 ]
 
-CLAUDE_CODE_KEYWORDS = [
-    "claude code",
-    "claude-code",
-    "agentic coding",
-    "claude agent sdk",
-    "coding agent",
-    "harness",
-    "subagent",
+ANTHROPIC_BLOG_KEYWORDS = [
+    # Claude Code
+    "claude code", "claude-code",
+    # Agent infrastructure
+    "agentic coding", "claude agent sdk", "agent sdk",
+    "managed agents", "managed agent",
+    "coding agent", "harness", "subagent",
+    # Protocol / integration
+    "mcp", "model context protocol",
+    "skill", "prompt caching", "prompt cache",
+    "computer use", "tool use",
+    # Official SDKs / APIs
+    "claude api", "anthropic api",
 ]
 
 # Regex to extract article metadata from Next.js SSR HTML.
@@ -135,7 +140,7 @@ def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
 
                 # T4: keyword filter (case-insensitive) on title + summary
                 combined = (title_clean + " " + summary_clean).lower()
-                if not any(kw in combined for kw in CLAUDE_CODE_KEYWORDS):
+                if not any(kw in combined for kw in ANTHROPIC_BLOG_KEYWORDS):
                     continue
 
                 # Construct full URL: base_url (without trailing slash) + "/" + slug

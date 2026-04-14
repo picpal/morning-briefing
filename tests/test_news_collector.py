@@ -214,6 +214,61 @@ class TestFetchAnthropicBlogPosts(unittest.TestCase):
         self.assertLessEqual(len(results), 10)
 
 
+class TestAnthropicBlogKeywordsConstant(unittest.TestCase):
+    """Verify ANTHROPIC_BLOG_KEYWORDS constant name and expanded contents."""
+
+    def test_constant_renamed_to_anthropic_blog_keywords(self):
+        """ANTHROPIC_BLOG_KEYWORDS must exist (renamed from CLAUDE_CODE_KEYWORDS)."""
+        from src.modules.news_collector import ANTHROPIC_BLOG_KEYWORDS
+        self.assertIsInstance(ANTHROPIC_BLOG_KEYWORDS, list)
+        self.assertGreater(len(ANTHROPIC_BLOG_KEYWORDS), 0)
+
+    def test_original_claude_code_keywords_present(self):
+        """Original Claude Code keywords must still be in ANTHROPIC_BLOG_KEYWORDS."""
+        from src.modules.news_collector import ANTHROPIC_BLOG_KEYWORDS
+        self.assertIn("claude code", ANTHROPIC_BLOG_KEYWORDS)
+        self.assertIn("claude-code", ANTHROPIC_BLOG_KEYWORDS)
+
+    def test_new_expanded_keywords_present(self):
+        """Expanded keywords (mcp, claude api, computer use, etc.) must be present."""
+        from src.modules.news_collector import ANTHROPIC_BLOG_KEYWORDS
+        expected_new = [
+            "mcp",
+            "model context protocol",
+            "claude api",
+            "anthropic api",
+            "computer use",
+            "tool use",
+            "prompt caching",
+            "managed agents",
+        ]
+        for kw in expected_new:
+            self.assertIn(kw, ANTHROPIC_BLOG_KEYWORDS, f"Missing keyword: '{kw}'")
+
+    @patch("src.modules.news_collector.requests.get")
+    def test_T4b_new_keywords_match_entries(self, mock_get):
+        """Entries with new expanded keywords (e.g. 'mcp') should be included."""
+        recent_date = (_kst_now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        html = _make_html(
+            published_on=recent_date,
+            slug="model-context-protocol-update",
+            title="Model Context Protocol Update",
+            summary="Anthropic launches new MCP integration for tool use.",
+        )
+        mock_resp = MagicMock()
+        mock_resp.text = html
+        mock_get.return_value = mock_resp
+
+        from src.modules.news_collector import fetch_anthropic_blog_posts
+        results = fetch_anthropic_blog_posts(days=3)
+
+        links = [e["link"] for e in results]
+        self.assertTrue(
+            any("model-context-protocol-update" in l for l in links),
+            "Entry with 'mcp'/'model context protocol' keyword should be included",
+        )
+
+
 class TestCollectAllNewsIntegration(unittest.TestCase):
     """Integration tests for collect_all_news() including claude_code_blog key."""
 
