@@ -11,7 +11,7 @@ from src.prompts.briefing_prompt import (
 )
 
 
-def _call_claude(system: str, user: str, max_tokens: int = 4096) -> str:
+def _call_claude(system: str, user: str, max_tokens: int = 8192) -> str:
     """Call Claude API and return the response text."""
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
     message = client.messages.create(

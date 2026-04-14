@@ -16,8 +16,8 @@ def _make_html(published_on: str, slug: str, title: str, summary: str) -> str:
     return (
         f'<html><script id="__NEXT_DATA__">'
         f'{pub},\\"slug\\":{{\\"current\\":\\"{slug}\\"}}'
-        f',\\"summary\\":\\"{summary}\\"'
         f',\\"title\\":\\"{title}\\"'
+        f',\\"summary\\":\\"{summary}\\"'
         f'</script></html>'
     )
 
@@ -199,8 +199,8 @@ class TestFetchAnthropicBlogPosts(unittest.TestCase):
                 parts.append(
                     f'\\"publishedOn\\":\\"{recent_date}\\",'
                     f'\\"slug\\":{{\\"current\\":\\"claude-code-item-{i}\\"}}'
-                    f',\\"summary\\":\\"agentic coding agent feature number {i}\\"'
                     f',\\"title\\":\\"Claude Code Feature Number {i}\\"'
+                    f',\\"summary\\":\\"agentic coding agent feature number {i}\\"'
                 )
             return "<html>" + " ".join(parts) + "</html>"
 

@@ -51,14 +51,14 @@ CLAUDE_CODE_KEYWORDS = [
 
 # Regex to extract article metadata from Next.js SSR HTML.
 # Groups: (1) publishedOn value or null, (2) slug string,
-#         (3) summary string, (4) title string.
+#         (3) title string, (4) summary string.
 _BLOG_PATTERN = re.compile(
     r'\\"publishedOn\\":(\\"[^"]+\\"|null)[^{}]*?'
     r'\\"slug\\":\{[^}]*?\\"current\\":\\"([^"]+)\\"'
     r'[\s\S]{0,3000}?'
-    r'\\"summary\\":\\"((?:[^"\\\\]|\\\\.)*)\\"'
-    r'[^{}]*?'
     r'\\"title\\":\\"((?:[^"\\\\]|\\\\.)*)\\"'
+    r'[^{}]*?'
+    r'\\"summary\\":\\"((?:[^"\\\\]|\\\\.)*)\\"'
 )
 
 
@@ -100,7 +100,7 @@ def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
             html = resp.text
 
             for match in _BLOG_PATTERN.finditer(html):
-                published_raw, slug, summary, title = match.groups()
+                published_raw, slug, title, summary = match.groups()
 
                 # T2: skip null publishedOn
                 if published_raw == "null":
