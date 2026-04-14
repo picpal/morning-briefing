@@ -37,6 +37,7 @@ def generate_briefing_markdown(news_data: dict[str, list[dict]]) -> str:
         "stock_finance": "주식 / 금융",
         "owasp_security": "OWASP / 보안",
         "claude_code_docs": "Claude Code / Docs 업데이트",
+        "claude_code_blog": "Claude Code 블로그",
     }
     for cat_key, items in news_data.items():
         cat_name = category_names.get(cat_key, cat_key)
