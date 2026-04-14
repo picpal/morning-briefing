@@ -37,6 +37,9 @@ BRIEFING_USER_TEMPLATE = """오늘 날짜: {date}
 ### 🛠️ Claude Code / Docs 업데이트
 - [기사 제목](URL) — 한국어 요약
 
+### 📝 Claude Code 블로그
+- [기사 제목](URL) — 한국어 요약
+
 ### 💡 오늘의 Pick
 > 선정 뉴스에 대한 상세 분석 (3~5문장)
 
