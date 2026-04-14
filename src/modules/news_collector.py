@@ -34,6 +34,125 @@ RSS_FEEDS = {
 }
 
 
+ANTHROPIC_BLOG_SOURCES = [
+    "https://www.anthropic.com/engineering",
+    "https://www.anthropic.com/news",
+]
+
+CLAUDE_CODE_KEYWORDS = [
+    "claude code",
+    "claude-code",
+    "agentic coding",
+    "claude agent sdk",
+    "coding agent",
+    "harness",
+    "subagent",
+]
+
+# Regex to extract article metadata from Next.js SSR HTML.
+# Groups: (1) publishedOn value or null, (2) slug string,
+#         (3) summary string, (4) title string.
+_BLOG_PATTERN = re.compile(
+    r'\\"publishedOn\\":(\\"[^"]+\\"|null)[^{}]*?'
+    r'\\"slug\\":\{[^}]*?\\"current\\":\\"([^"]+)\\"'
+    r'[\s\S]{0,3000}?'
+    r'\\"summary\\":\\"((?:[^"\\\\]|\\\\.)*)\\"'
+    r'[^{}]*?'
+    r'\\"title\\":\\"((?:[^"\\\\]|\\\\.)*)\\"'
+)
+
+
+def fetch_anthropic_blog_posts(days: int = 3) -> list[dict]:
+    """Fetch Anthropic blog posts mentioning Claude Code published within *days* days.
+
+    Uses Next.js SSR JSON embedded in the page HTML — no external HTML parser
+    dependency beyond what is already imported.  Returns a list of dicts with
+    the same shape as fetch_rss_entries entries.
+    """
+    KST = timezone(timedelta(hours=9))
+    cutoff = datetime.now(KST) - timedelta(days=days)
+    entries: list[dict] = []
+
+    for url in ANTHROPIC_BLOG_SOURCES:
+        try:
+            resp = requests.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=10,
+            )
+            html = resp.text
+
+            for match in _BLOG_PATTERN.finditer(html):
+                published_raw, slug, summary, title = match.groups()
+
+                # T2: skip null publishedOn
+                if published_raw == "null":
+                    continue
+
+                # Strip surrounding escaped quotes from publishedOn value
+                date_str = published_raw.strip('\\"')
+
+                # Parse date — handle YYYY-MM-DD and ISO-8601 variants
+                try:
+                    if "T" in date_str or "t" in date_str:
+                        # ISO-8601 with time component
+                        parsed_date = datetime.fromisoformat(
+                            date_str.replace("Z", "+00:00")
+                        )
+                        # Convert to KST for comparison
+                        parsed_date = parsed_date.astimezone(KST)
+                    else:
+                        # Short form YYYY-MM-DD — treat as KST midnight
+                        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").replace(
+                            tzinfo=KST
+                        )
+                except ValueError:
+                    continue
+
+                # T3: skip entries older than cutoff
+                if parsed_date < cutoff:
+                    continue
+
+                # Unescape simple backslash sequences in extracted strings
+                def _unescape(s: str) -> str:
+                    return s.replace('\\"', '"').replace("\\\\", "\\").replace("\\n", " ")
+
+                title_clean = _unescape(title)
+                summary_clean = _unescape(summary)
+
+                # T4: keyword filter (case-insensitive) on title + summary
+                combined = (title_clean + " " + summary_clean).lower()
+                if not any(kw in combined for kw in CLAUDE_CODE_KEYWORDS):
+                    continue
+
+                # Construct full URL: base_url (without trailing slash) + "/" + slug
+                base = url.rstrip("/")
+                full_url = base + "/" + slug
+
+                entries.append({
+                    "title": title_clean,
+                    "link": full_url,
+                    "summary": summary_clean,
+                    "published": parsed_date.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                    "source": "Anthropic Blog",
+                })
+
+        except Exception as e:
+            print(f"  Anthropic blog error ({url}): {e}")
+
+    # T7: dedup by title similarity (same algo as collect_all_news)
+    seen_titles: set[str] = set()
+    unique: list[dict] = []
+    for e in entries:
+        short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
+        if short_title not in seen_titles:
+            seen_titles.add(short_title)
+            unique.append(e)
+
+    # T8: cap at 10
+    return unique[:10]
+
+
 def fetch_rss_entries(feed_url: str, hours: int = 48) -> list[dict]:
     """Fetch RSS entries from the last N hours."""
     try:
@@ -77,6 +196,19 @@ def collect_all_news() -> dict[str, list[dict]]:
                 unique.append(e)
         all_news[category] = unique[:10]  # Max 10 per category
         print(f"  [{category}] {len(unique)} articles collected")
+
+    # T6: Integrate Anthropic blog posts under "claude_code_blog" key
+    blog_entries = fetch_anthropic_blog_posts()
+    seen_blog_titles: set[str] = set()
+    unique_blog: list[dict] = []
+    for e in blog_entries:
+        short_title = re.sub(r"[^a-zA-Z가-힣0-9]", "", e["title"].lower())[:40]
+        if short_title not in seen_blog_titles:
+            seen_blog_titles.add(short_title)
+            unique_blog.append(e)
+    all_news["claude_code_blog"] = unique_blog[:10]
+    print(f"  [claude_code_blog] {len(unique_blog)} articles collected")
+
     return all_news
 
 
