@@ -5,6 +5,7 @@ Collects IT/LLM news, generates a podcast-style briefing,
 converts to audio, and delivers via Notion + Slack.
 """
 import os
+import re
 import sys
 import json
 from datetime import datetime, timezone, timedelta
@@ -32,6 +33,39 @@ def validate_env():
     if missing:
         print(f"[ERROR] 필수 환경변수가 설정되지 않았습니다: {', '.join(missing)}")
         sys.exit(1)
+
+
+def cleanup_old_outputs(output_dir: str = "output", keep_days: int = 3) -> None:
+    """파일명의 날짜(YYYY-MM-DD)가 keep_days 이상 지난 output 파일을 삭제.
+
+    output_dir의 하위 디렉토리(markdown/, audio/, scripts/)까지 재귀 순회한다.
+    """
+    if not os.path.isdir(output_dir):
+        return
+
+    KST = timezone(timedelta(hours=9))
+    cutoff = datetime.now(KST).date() - timedelta(days=keep_days)
+    pattern = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+    removed = []
+    for root, _, files in os.walk(output_dir):
+        for name in files:
+            match = pattern.search(name)
+            if not match:
+                continue
+            try:
+                file_date = datetime.strptime(match.group(1), "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if file_date < cutoff:
+                path = os.path.join(root, name)
+                os.remove(path)
+                removed.append(os.path.relpath(path, output_dir))
+
+    if removed:
+        print(f"  Removed {len(removed)} old file(s) (older than {keep_days} days):")
+        for name in removed:
+            print(f"    - {name}")
 
 
 def run_pipeline():
@@ -63,8 +97,10 @@ def run_pipeline():
     briefing_md = generate_briefing_markdown(news_data)
 
     # Save markdown
-    os.makedirs("output", exist_ok=True)
-    md_path = f"output/briefing-{today}.md"
+    for sub in ("markdown", "audio", "scripts"):
+        os.makedirs(f"output/{sub}", exist_ok=True)
+    cleanup_old_outputs("output", keep_days=3)
+    md_path = f"output/markdown/briefing-{today}.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(briefing_md)
     print(f"  Saved: {md_path}")
@@ -73,14 +109,14 @@ def run_pipeline():
     print("\n[3/5] Generating podcast script...")
     podcast_script = generate_podcast_script(briefing_md)
 
-    script_path = f"output/script-{today}.txt"
+    script_path = f"output/scripts/script-{today}.txt"
     with open(script_path, "w", encoding="utf-8") as f:
         f.write(podcast_script)
     print(f"  Saved: {script_path}")
 
     # Step 4: Generate audio via Google TTS
     print("\n[4/5] Generating audio...")
-    audio_path = f"output/briefing-{today}.mp3"
+    audio_path = f"output/audio/briefing-{today}.mp3"
     generate_audio(podcast_script, audio_path)
 
     # Upload audio to GitHub Release or get URL
