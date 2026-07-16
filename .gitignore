@@ -4,6 +4,4 @@ __pycache__/
 *.key.json
 .venv/
 venv/
-.baton/logs/
-.baton/reports/
 .discord-token
